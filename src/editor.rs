@@ -1637,6 +1637,8 @@ impl Editor {
                 buffer_state.viewport = view_state.viewport.clone();
             }
         }
+        // Ensure the active tab is visible in the newly active split
+        self.ensure_active_tab_visible(split_id, self.active_buffer, self.terminal_width);
     }
 
     /// Adjust cursors in other splits that share the same buffer after an edit
@@ -1909,6 +1911,9 @@ impl Editor {
         if let Some(view_state) = self.split_view_states.get_mut(&active_split) {
             view_state.add_buffer(buffer_id);
         }
+
+        // Ensure the newly active tab is visible
+        self.ensure_active_tab_visible(active_split, buffer_id, self.terminal_width);
 
         // Sync file explorer to the new active file (if visible and applicable)
         self.sync_file_explorer_to_active_file();
@@ -6994,6 +6999,26 @@ impl Editor {
             Action::AddCursorBelow => self.add_cursor_below(),
             Action::NextBuffer => self.next_buffer(),
             Action::PrevBuffer => self.prev_buffer(),
+
+            // Tab scrolling
+            Action::ScrollTabsLeft => {
+                let active_split_id = self.split_manager.active_split();
+                if let Some(view_state) = self.split_view_states.get_mut(&active_split_id) {
+                    view_state.tab_scroll_offset = view_state.tab_scroll_offset.saturating_sub(5);
+                    // After manual scroll, re-evaluate to clamp and show indicators
+                    self.ensure_active_tab_visible(active_split_id, self.active_buffer, self.terminal_width);
+                    self.set_status_message("Scrolled tabs left".to_string());
+                }
+            }
+            Action::ScrollTabsRight => {
+                let active_split_id = self.split_manager.active_split();
+                if let Some(view_state) = self.split_view_states.get_mut(&active_split_id) {
+                    view_state.tab_scroll_offset = view_state.tab_scroll_offset.saturating_add(5);
+                    // After manual scroll, re-evaluate to clamp and show indicators
+                    self.ensure_active_tab_visible(active_split_id, self.active_buffer, self.terminal_width);
+                    self.set_status_message("Scrolled tabs right".to_string());
+                }
+            }
             Action::NavigateBack => self.navigate_back(),
             Action::NavigateForward => self.navigate_forward(),
             Action::SplitHorizontal => self.split_pane_horizontal(),
@@ -11328,14 +11353,74 @@ impl Editor {
             }
         }
     }
-}
 
-impl Drop for Editor {
-    fn drop(&mut self) {
-        // Save histories on shutdown
-        self.save_histories();
+    /// Ensure the active tab in a split is visible by adjusting its scroll offset.
+    /// This function recalculates the required scroll_offset based on the active tab's position
+    /// and the available width, and updates the SplitViewState.
+    fn ensure_active_tab_visible(&mut self, split_id: SplitId, active_buffer: BufferId, available_width: u16) {
+        let Some(view_state) = self.split_view_states.get_mut(&split_id) else {
+            return;
+        };
+
+        let split_buffers = &view_state.open_buffers;
+        let buffers = &self.buffers;
+        let buffer_metadata = &self.buffer_metadata;
+        // The theme is not strictly necessary here, but passed to TabsRenderer
+        // so we'll just use a dummy default style for width calculation
+
+        // Calculate widths of tabs (and separators)
+        let mut tab_layout_info: Vec<(usize, bool)> = Vec::new();
+        for (idx, id) in split_buffers.iter().enumerate() {
+            let Some(state) = buffers.get(id) else {
+                continue;
+            };
+
+            let name = if let Some(metadata) = buffer_metadata.get(id) {
+                metadata.display_name.as_str()
+            } else {
+                state
+                    .buffer
+                    .file_path()
+                    .and_then(|p| p.file_name())
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("[No Name]")
+            };
+
+            let modified_indicator_width = if state.buffer.is_modified() { 1 } else { 0 };
+            let tab_width = 2 + name.chars().count() + modified_indicator_width; // " {name}{modified} "
+            let is_active = *id == active_buffer;
+
+            tab_layout_info.push((tab_width, is_active));
+            if idx < split_buffers.len() - 1 {
+                tab_layout_info.push((1, false)); // separator
+            }
+        }
+
+        let total_tabs_width: usize = tab_layout_info.iter().map(|(w, _)| w).sum();
+        let max_visible_width = available_width as usize;
+
+        let tab_widths: Vec<usize> = tab_layout_info.iter().map(|(w, _)| *w).collect();
+        let active_tab_index = tab_layout_info
+            .iter()
+            .position(|(_, is_active)| *is_active);
+
+        let new_scroll_offset = if let Some(idx) = active_tab_index {
+            crate::ui::tabs::compute_tab_scroll_offset(
+                &tab_widths,
+                idx,
+                max_visible_width,
+                view_state.tab_scroll_offset,
+                1, // separator width
+            )
+        } else {
+            view_state.tab_scroll_offset.min(total_tabs_width.saturating_sub(max_visible_width))
+        };
+
+        view_state.tab_scroll_offset = new_scroll_offset;
     }
 }
+
+
 
 /// Parse a key string like "RET", "C-n", "M-x", "q" into KeyCode and KeyModifiers
 ///
@@ -12712,5 +12797,63 @@ mod tests {
             "After second rename"
         );
     }
-}
 
+    #[test]
+    fn test_ensure_active_tab_visible_static_offset() {
+        let config = Config::default();
+        let mut editor = Editor::new(config, 80, 24).unwrap();
+        let split_id = editor.split_manager.active_split();
+
+        // Create three buffers with long names to force scrolling.
+        let buf1 = editor.new_buffer();
+        editor.buffers.get_mut(&buf1).unwrap().buffer.set_file_path(std::path::PathBuf::from("aaa_long_name_01.txt"));
+        let buf2 = editor.new_buffer();
+        editor.buffers.get_mut(&buf2).unwrap().buffer.set_file_path(std::path::PathBuf::from("bbb_long_name_02.txt"));
+        let buf3 = editor.new_buffer();
+        editor.buffers.get_mut(&buf3).unwrap().buffer.set_file_path(std::path::PathBuf::from("ccc_long_name_03.txt"));
+
+        {
+            let view_state = editor.split_view_states.get_mut(&split_id).unwrap();
+            view_state.open_buffers = vec![buf1, buf2, buf3];
+            view_state.tab_scroll_offset = 50;
+        }
+
+        // Force active buffer to first tab and ensure helper brings it into view.
+        editor.ensure_active_tab_visible(split_id, buf1, 20);
+        assert_eq!(
+            editor
+                .split_view_states
+                .get(&split_id)
+                .unwrap()
+                .tab_scroll_offset,
+            0
+        );
+
+        // Now make the last tab active and ensure offset moves forward but stays bounded.
+        editor.ensure_active_tab_visible(split_id, buf3, 20);
+        let view_state = editor.split_view_states.get(&split_id).unwrap();
+        assert!(view_state.tab_scroll_offset > 0);
+        let total_width: usize = view_state
+            .open_buffers
+            .iter()
+            .enumerate()
+            .map(|(idx, id)| {
+                let state = editor.buffers.get(id).unwrap();
+                let name_len = state
+                    .buffer
+                    .file_path()
+                    .and_then(|p| p.file_name())
+                    .and_then(|n| n.to_str())
+                    .map(|s| s.chars().count())
+                    .unwrap_or(0);
+                let tab_width = 2 + name_len;
+                if idx < view_state.open_buffers.len() - 1 {
+                    tab_width + 1 // separator
+                } else {
+                    tab_width
+                }
+            })
+            .sum();
+        assert!(view_state.tab_scroll_offset <= total_width);
+    }
+}

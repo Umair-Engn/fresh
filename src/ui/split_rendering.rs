@@ -95,17 +95,17 @@ impl SplitRenderer {
             );
 
             // Get the open buffers for this split from split_view_states
-            let split_buffers: Vec<BufferId> = if let Some(view_states) = split_view_states {
+            let (split_buffers, tab_scroll_offset) = if let Some(view_states) = split_view_states {
                 if let Some(view_state) = view_states.get(&split_id) {
-                    // Use the split's open_buffers list
-                    view_state.open_buffers.clone()
+                    // Use the split's open_buffers list and tab_scroll_offset
+                    (view_state.open_buffers.clone(), view_state.tab_scroll_offset)
                 } else {
                     // No view state for this split - just show the current buffer
-                    vec![buffer_id]
+                    (vec![buffer_id], 0)
                 }
             } else {
                 // No view states at all - just show the current buffer
-                vec![buffer_id]
+                (vec![buffer_id], 0)
             };
 
             // Render tabs for this split
@@ -118,6 +118,7 @@ impl SplitRenderer {
                 buffer_id, // The currently displayed buffer in this split
                 theme,
                 is_active,
+                tab_scroll_offset,
             );
 
             // Get references separately to avoid double borrow

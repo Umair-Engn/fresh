@@ -1455,7 +1455,10 @@ pub fn action_to_events(
         | Action::MenuExecute
         | Action::MenuOpen(_)
         | Action::PluginAction(_)
-        | Action::None => return None,
+        | Action::None
+        | Action::ScrollTabsLeft
+        | Action::ScrollTabsRight
+        => return None,
 
         // Block/rectangular selection actions
         Action::BlockSelectLeft => {

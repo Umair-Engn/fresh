@@ -75,6 +75,9 @@ pub struct SplitViewState {
     /// List of buffer IDs open in this split's tab bar (in order)
     /// The currently displayed buffer is tracked in the SplitNode::Leaf
     pub open_buffers: Vec<BufferId>,
+
+    /// Horizontal scroll offset for the tabs in this split
+    pub tab_scroll_offset: usize,
 }
 
 impl SplitViewState {
@@ -84,6 +87,7 @@ impl SplitViewState {
             cursors: Cursors::new(),
             viewport: Viewport::new(width, height),
             open_buffers: Vec::new(),
+            tab_scroll_offset: 0,
         }
     }
 
@@ -93,6 +97,7 @@ impl SplitViewState {
             cursors: Cursors::new(),
             viewport: Viewport::new(width, height),
             open_buffers: vec![buffer_id],
+            tab_scroll_offset: 0,
         }
     }
 

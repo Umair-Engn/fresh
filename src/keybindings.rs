@@ -235,6 +235,10 @@ pub enum Action {
     NextBuffer,
     PrevBuffer,
 
+    // Tab scrolling
+    ScrollTabsLeft,
+    ScrollTabsRight,
+
     // Position history navigation
     NavigateBack,
     NavigateForward,
@@ -1222,6 +1226,10 @@ impl KeybindingResolver {
             Action::NextBuffer,
         );
 
+        // Tab scrolling
+        bindings.insert((KeyCode::PageUp, KeyModifiers::ALT), Action::ScrollTabsLeft);
+        bindings.insert((KeyCode::PageDown, KeyModifiers::ALT), Action::ScrollTabsRight);
+
         // Position history navigation (Alt+Left/Right - like VS Code)
         bindings.insert((KeyCode::Left, KeyModifiers::ALT), Action::NavigateBack);
         bindings.insert((KeyCode::Right, KeyModifiers::ALT), Action::NavigateForward);
@@ -1702,6 +1710,8 @@ impl KeybindingResolver {
             Action::MenuExecute => "Execute selected menu item".to_string(),
             Action::MenuOpen(name) => format!("Open {} menu", name),
             Action::PluginAction(name) => format!("Plugin action: {}", name),
+            Action::ScrollTabsLeft => "Scroll tabs left".to_string(),
+            Action::ScrollTabsRight => "Scroll tabs right".to_string(),
             Action::None => "No action".to_string(),
         }
     }
