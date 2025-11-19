@@ -6,15 +6,18 @@ This is a completely free and open source project, not owned by any commerical c
 
 **Status:** Alpha preview, early adopters version -0.1
 
-![Fresh Screenshot](docs/screenshot1.png)
-
 ## Features
 
-- **Ease of use** - Command palette and discoverable menus.
+- **Easy** - Intuitive out of the box with command palette and discoverable menus
 - **Huge file support** - Opens multi-gigabyte files in milliseconds
+- **Lightweight** - Low memory footprint, minimal CPU usage, instant startup
 - **TypeScript plugins** - Extend the editor with plugins that run in a sandboxed Deno environment
 - **LSP integration** - Diagnostics, completion, and go-to-definition out of the box
 - **Powerful editing** - Multi-cursor support, macros, split views, etc.
+
+![Fresh Screenshot](docs/screenshot1.png)
+![Fresh Screenshot](docs/screenshot2.png)
+![Fresh Screenshot](docs/screenshot3.png)
 
 ## Installation
 
