@@ -462,7 +462,7 @@ fn parse_struct(lines: &[&str], struct_line_idx: usize) -> Option<StructInfo> {
     // Extract struct name
     let name_start = struct_line.find("struct ")? + 7;
     let name_end = struct_line[name_start..]
-        .find(|c: char| c == ' ' || c == '{')
+        .find([' ', '{'])
         .map(|p| name_start + p)
         .unwrap_or(struct_line.len());
     let name = struct_line[name_start..name_end].trim().to_string();
@@ -810,7 +810,7 @@ fn generate_markdown_docs(
                 };
                 md.push_str(&format!("| `{}` | {} |\n", field.name, desc));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
     }
 
@@ -858,7 +858,7 @@ fn generate_markdown_docs(
                             md.push_str(&format!("{}\n", trimmed));
                         }
                     }
-                    md.push_str("\n");
+                    md.push('\n');
                 }
 
                 // Signature
@@ -901,7 +901,7 @@ fn generate_markdown_docs(
                             param.name, param.ts_type, optional_mark, desc
                         ));
                     }
-                    md.push_str("\n");
+                    md.push('\n');
                 }
 
                 // Example if present
