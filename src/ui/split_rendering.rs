@@ -641,11 +641,10 @@ impl SplitRenderer {
             Vec::new()
         };
 
-        // Get primary cursor position - we won't apply REVERSED to it to preserve terminal cursor visibility
-        // Even if show_cursors is false, we need to know where the primary cursor would be for viewport positioning
-        let primary_cursor_position = source_to_view
-            .get(&state.cursors.primary().position)
-            .copied()
+        // Get primary cursor view position (if mapped)
+        let primary_cursor_view_idx = source_to_view.get(&state.cursors.primary().position).copied();
+        // If unmapped, keep source byte for logging/fallbacks
+        let primary_cursor_position = primary_cursor_view_idx
             .unwrap_or(state.cursors.primary().position);
 
         tracing::trace!(
@@ -1449,12 +1448,17 @@ impl SplitRenderer {
             };
         }
 
+        let mut have_cursor = false;
         if let Some(pos) = source_to_screen.get(&state.cursors.primary().position) {
             cursor_screen_x = pos.0;
             cursor_screen_y = pos.1;
-        } else if let Some(pos) = view_to_screen.get(&primary_cursor_position) {
-            cursor_screen_x = pos.0;
-            cursor_screen_y = pos.1;
+            have_cursor = true;
+        } else if let Some(view_idx) = primary_cursor_view_idx {
+            if let Some(pos) = view_to_screen.get(&view_idx) {
+                cursor_screen_x = pos.0;
+                cursor_screen_y = pos.1;
+                have_cursor = true;
+            }
         }
 
         while lines.len() < render_area.height as usize {
@@ -1483,7 +1487,7 @@ impl SplitRenderer {
 
         // Render cursor and log state (only for active split)
         // Only show hardware cursor if show_cursors is true for this buffer and not hidden
-        if is_active && state.show_cursors && !hide_cursor {
+        if is_active && state.show_cursors && !hide_cursor && have_cursor {
             // Use cursor position calculated during rendering (no need to call cursor_screen_position)
             let (x, y) = (cursor_screen_x, cursor_screen_y);
 
@@ -1491,7 +1495,7 @@ impl SplitRenderer {
                 "Setting hardware cursor to PRIMARY cursor position: ({}, {}), view idx mapping {:?}, buffer pos {}",
                 x,
                 y,
-                view_to_screen.get(&primary_cursor_position),
+                primary_cursor_view_idx.and_then(|v| view_to_screen.get(&v)),
                 state.cursors.primary().position
             );
 
