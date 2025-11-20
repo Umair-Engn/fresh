@@ -4,6 +4,7 @@ pub mod fake_lsp;
 pub mod fixtures;
 pub mod git_test_helper;
 pub mod harness;
+pub mod tracing;
 pub mod visual_testing;
 
 // Note: Visual regression tests write their own documentation files independently.

@@ -3949,6 +3949,12 @@ impl Editor {
                 params,
                 request_id,
             } => {
+                tracing::debug!(
+                    "Plugin LSP request {} for language '{}': method={}",
+                    request_id,
+                    language,
+                    method
+                );
                 let error = if let Some(lsp) = self.lsp.as_mut() {
                     if let Some(handle) = lsp.get_or_spawn(&language) {
                         if let Err(e) = handle.send_plugin_request(request_id, method, params) {

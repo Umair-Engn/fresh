@@ -69,35 +69,44 @@ while true; do
     method=$(echo "$msg" | grep -o '"method":"[^"]*"' | cut -d'"' -f4)
     msg_id=$(echo "$msg" | grep -o '"id":[0-9]*' | cut -d':' -f2)
 
-    case "$method" in
-        "initialize")
-            # Send initialize response
-            send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":{"capabilities":{"completionProvider":{"triggerCharacters":[".",":",":"]},"definitionProvider":true,"textDocumentSync":1}}}'
-            ;;
-        "textDocument/completion")
-            # Send completion response with sample items
-            send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":{"items":[{"label":"test_function","kind":3,"detail":"fn test_function()","insertText":"test_function"},{"label":"test_variable","kind":6,"detail":"let test_variable","insertText":"test_variable"},{"label":"test_struct","kind":22,"detail":"struct TestStruct","insertText":"test_struct"}]}}'
-            ;;
-        "textDocument/definition")
-            # Send definition response (points to line 0, col 0)
-            uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
-            send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":{"uri":"'$uri'","range":{"start":{"line":0,"character":0},"end":{"line":0,"character":10}}}}'
-            ;;
-        "textDocument/didSave")
-            # Send diagnostics after save
-            uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
-            send_message '{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"'$uri'","diagnostics":[{"range":{"start":{"line":0,"character":4},"end":{"line":0,"character":5}},"severity":1,"message":"Test error from fake LSP"}]}}'
-            ;;
-        "textDocument/switchSourceHeader")
-            uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
-            header="${uri%.*}.h"
-            send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":"'"$header"'" }'
-            ;;
-        "shutdown")
-            send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":null}'
-            break
-            ;;
-    esac
+case "$method" in
+    "initialize")
+        # Send initialize response
+        send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":{"capabilities":{"completionProvider":{"triggerCharacters":[".",":",":"]},"definitionProvider":true,"textDocumentSync":1}}}'
+        ;;
+    "textDocument/completion")
+        # Send completion response with sample items
+        send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":{"items":[{"label":"test_function","kind":3,"detail":"fn test_function()","insertText":"test_function"},{"label":"test_variable","kind":6,"detail":"let test_variable","insertText":"test_variable"},{"label":"test_struct","kind":22,"detail":"struct TestStruct","insertText":"test_struct"}]}}'
+        ;;
+    "textDocument/definition")
+        # Send definition response (points to line 0, col 0)
+        uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
+        send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":{"uri":"'$uri'","range":{"start":{"line":0,"character":0},"end":{"line":0,"character":10}}}}'
+        ;;
+    "textDocument/didSave")
+        # Send diagnostics after save
+        uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
+        send_message '{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"'$uri'","diagnostics":[{"range":{"start":{"line":0,"character":4},"end":{"line":0,"character":5}},"severity":1,"message":"Test error from fake LSP"}]}}'
+        ;;
+    "textDocument/diagnostic")
+        # Respond with empty diagnostics
+        uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
+        send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":{"uri":"'$uri'","items":[],"resultId":null}}'
+        ;;
+    "textDocument/inlayHint")
+        uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
+        send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":[]}'
+        ;;
+    "textDocument/switchSourceHeader")
+        uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
+        header="${uri%.*}.h"
+        send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":"'"$header"'" }'
+        ;;
+    "shutdown")
+        send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":null}'
+        break
+        ;;
+esac
 done
 "#;
 

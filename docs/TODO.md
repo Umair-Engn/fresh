@@ -34,3 +34,8 @@
 - Add editor-side commands (similar to `commands.rs` entries) that plugin(s) can invoke.
 - Build the TypeScript plugin(s) under `plugins/`, referencing `plugins/README.md` and existing examples for panels and overlays.
 - Update docs (e.g., `docs/USER_GUIDE.md`) with usage notes for the new clangd features and plugin commands.
+### Clangd plugin bridge verification
+
+- The async LSP bridge uses `PluginCommand::SendLspRequest`/`PluginResponse::LspRequest`, so the editor now logs both the plugin request and the `LspHandle` enqueue step before forwarding the JSON-RPC call.
+- Fake servers used in the tests must answer the `textDocument/diagnostic` and `textDocument/inlayHint` requests (the real client waits for those responses), otherwise the switch-source/header command is never dispatched.
+- After those requests complete, the plugin can reach `textDocument/switchSourceHeader`, open the returned URI, and satisfy the clangd helper test without touching the production LSP servers.

@@ -3330,13 +3330,32 @@ impl LspHandle {
         method: String,
         params: Option<Value>,
     ) -> Result<(), String> {
-        self.command_tx
-            .try_send(LspCommand::PluginRequest {
-                request_id,
-                method,
-                params,
-            })
-            .map_err(|_| "Failed to send plugin LSP request".to_string())
+        tracing::trace!(
+            "LspHandle sending plugin request {}: method={}",
+            request_id,
+            method
+        );
+        match self.command_tx.try_send(LspCommand::PluginRequest {
+            request_id,
+            method,
+            params,
+        }) {
+            Ok(()) => {
+                tracing::trace!(
+                    "LspHandle enqueued plugin request {} successfully",
+                    request_id
+                );
+                Ok(())
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to enqueue plugin request {}: {}",
+                    request_id,
+                    e
+                );
+                Err("Failed to send plugin LSP request".to_string())
+            }
+        }
     }
 
     /// Shutdown the server
