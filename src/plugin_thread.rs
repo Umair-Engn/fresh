@@ -220,38 +220,12 @@ impl PluginThreadHandle {
     ///
     /// This is called by the editor after processing a command that requires a response.
     pub fn deliver_response(&self, response: crate::plugin_api::PluginResponse) {
-        let request_id = match &response {
-            crate::plugin_api::PluginResponse::VirtualBufferCreated { request_id, .. } => {
-                *request_id
-            }
-            crate::plugin_api::PluginResponse::LspRequest { request_id, .. } => *request_id,
-        };
-
-        tracing::trace!("deliver_response: request_id={}", request_id);
-
-        let sender = {
-            let mut pending = self.pending_responses.lock().unwrap();
-            tracing::trace!(
-                "deliver_response: pending_responses has {} entries",
-                pending.len()
-            );
-            pending.remove(&request_id)
-        };
-
-        if let Some(tx) = sender {
-            tracing::trace!(
-                "deliver_response: sending response for request_id={}",
-                request_id
-            );
-            let _ = tx.send(response);
-        } else {
-            tracing::warn!("No pending response sender for request_id {}", request_id);
-        }
+        respond_to_pending(&self.pending_responses, response);
     }
 
     /// Load a plugin from a file (blocking)
     pub fn load_plugin(&self, path: &Path) -> Result<()> {
-        let (tx, rx) = oneshot::channel();
+        let (tx, mut rx) = oneshot::channel();
         self.request_sender
             .send(PluginRequest::LoadPlugin {
                 path: path.to_path_buf(),
@@ -264,7 +238,7 @@ impl PluginThreadHandle {
 
     /// Load all plugins from a directory (blocking)
     pub fn load_plugins_from_dir(&self, dir: &Path) -> Vec<String> {
-        let (tx, rx) = oneshot::channel();
+        let (tx, mut rx) = oneshot::channel();
         if self
             .request_sender
             .send(PluginRequest::LoadPluginsFromDir {
@@ -282,7 +256,7 @@ impl PluginThreadHandle {
 
     /// Unload a plugin (blocking)
     pub fn unload_plugin(&self, name: &str) -> Result<()> {
-        let (tx, rx) = oneshot::channel();
+        let (tx, mut rx) = oneshot::channel();
         self.request_sender
             .send(PluginRequest::UnloadPlugin {
                 name: name.to_string(),
@@ -295,7 +269,7 @@ impl PluginThreadHandle {
 
     /// Reload a plugin (blocking)
     pub fn reload_plugin(&self, name: &str) -> Result<()> {
-        let (tx, rx) = oneshot::channel();
+        let (tx, mut rx) = oneshot::channel();
         self.request_sender
             .send(PluginRequest::ReloadPlugin {
                 name: name.to_string(),
@@ -312,7 +286,7 @@ impl PluginThreadHandle {
     /// The caller should poll this while processing commands to avoid deadlock.
     pub fn execute_action_async(&self, action_name: &str) -> Result<oneshot::Receiver<Result<()>>> {
         tracing::trace!("execute_action_async: starting action '{}'", action_name);
-        let (tx, rx) = oneshot::channel();
+        let (tx, mut rx) = oneshot::channel();
         self.request_sender
             .send(PluginRequest::ExecuteAction {
                 action_name: action_name.to_string(),
@@ -338,7 +312,7 @@ impl PluginThreadHandle {
 
     /// Check if any handlers are registered for a hook (blocking)
     pub fn has_hook_handlers(&self, hook_name: &str) -> bool {
-        let (tx, rx) = oneshot::channel();
+        let (tx, mut rx) = oneshot::channel();
         if self
             .request_sender
             .send(PluginRequest::HasHookHandlers {
@@ -355,7 +329,7 @@ impl PluginThreadHandle {
 
     /// List all loaded plugins (blocking)
     pub fn list_plugins(&self) -> Vec<TsPluginInfo> {
-        let (tx, rx) = oneshot::channel();
+        let (tx, mut rx) = oneshot::channel();
         if self
             .request_sender
             .send(PluginRequest::ListPlugins { response: tx })
@@ -403,6 +377,86 @@ impl PluginThreadHandle {
 impl Drop for PluginThreadHandle {
     fn drop(&mut self) {
         self.shutdown();
+    }
+}
+
+fn respond_to_pending(
+    pending_responses: &crate::ts_runtime::PendingResponses,
+    response: crate::plugin_api::PluginResponse,
+) {
+    let request_id = match &response {
+        crate::plugin_api::PluginResponse::VirtualBufferCreated { request_id, .. } => *request_id,
+        crate::plugin_api::PluginResponse::LspRequest { request_id, .. } => *request_id,
+    };
+
+    let sender = {
+        let mut pending = pending_responses.lock().unwrap();
+        pending.remove(&request_id)
+    };
+
+    if let Some(tx) = sender {
+        let _ = tx.send(response);
+    }
+}
+
+#[cfg(test)]
+mod plugin_thread_tests {
+    use super::*;
+    use crate::plugin_api::PluginResponse;
+    use crate::ts_runtime::PendingResponses;
+    use serde_json::json;
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
+    use tokio::sync::oneshot;
+
+    #[test]
+    fn respond_to_pending_sends_lsp_response() {
+        let pending: PendingResponses = Arc::new(Mutex::new(HashMap::new()));
+        let (tx, mut rx) = oneshot::channel();
+        pending.lock().unwrap().insert(123, tx);
+
+        respond_to_pending(
+            &pending,
+            PluginResponse::LspRequest {
+                request_id: 123,
+                result: Ok(json!({ "key": "value" })),
+            },
+        );
+
+        let response = rx.try_recv().expect("expected response");
+        match response {
+            PluginResponse::LspRequest { result, .. } => {
+                assert_eq!(result.unwrap(), json!({ "key": "value" }));
+            }
+            _ => panic!("unexpected variant"),
+        }
+
+        assert!(pending.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn respond_to_pending_handles_virtual_buffer_created() {
+        let pending: PendingResponses = Arc::new(Mutex::new(HashMap::new()));
+        let (tx, mut rx) = oneshot::channel();
+        pending.lock().unwrap().insert(456, tx);
+
+        respond_to_pending(
+            &pending,
+            PluginResponse::VirtualBufferCreated {
+                request_id: 456,
+                buffer_id: crate::event::BufferId(7),
+            },
+        );
+
+        let response = rx.try_recv().expect("expected response");
+        match response {
+            PluginResponse::VirtualBufferCreated { buffer_id, .. } => {
+                assert_eq!(buffer_id.0, 7);
+            }
+            _ => panic!("unexpected variant"),
+        }
+
+        assert!(pending.lock().unwrap().is_empty());
     }
 }
 

@@ -88,6 +88,11 @@ while true; do
             uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
             send_message '{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"'$uri'","diagnostics":[{"range":{"start":{"line":0,"character":4},"end":{"line":0,"character":5}},"severity":1,"message":"Test error from fake LSP"}]}}'
             ;;
+        "textDocument/switchSourceHeader")
+            uri=$(echo "$msg" | grep -o '"uri":"[^"]*"' | head -1 | cut -d'"' -f4)
+            header="${uri%.*}.h"
+            send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":"'"$header"'" }'
+            ;;
         "shutdown")
             send_message '{"jsonrpc":"2.0","id":'$msg_id',"result":null}'
             break

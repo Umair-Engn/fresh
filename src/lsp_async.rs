@@ -1339,6 +1339,12 @@ impl LspState {
         params: Option<Value>,
         pending: &Arc<Mutex<HashMap<i64, oneshot::Sender<Result<Value, String>>>>>,
     ) {
+        tracing::trace!(
+            "Plugin request {} => method={} params={:?}",
+            request_id,
+            method,
+            params
+        );
         let result = self
             .send_request_sequential_tracked::<Value, Value>(
                 &method,
@@ -1348,6 +1354,11 @@ impl LspState {
             )
             .await;
 
+        tracing::trace!(
+            "Plugin request {} completed with result {:?}",
+            request_id,
+            &result
+        );
         let _ = self.async_tx.send(AsyncMessage::PluginLspResponse {
             language: self.language.clone(),
             request_id,

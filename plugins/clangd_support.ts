@@ -65,10 +65,12 @@ globalThis.clangdSwitchSourceHeader = async function(): Promise<void> {
   }
 
   const uri = pathToFileUri(path);
+  editor.debug(`clangdSwitchSourceHeader: sending request for ${uri}`);
   try {
     const result = await editor.sendLspRequest(language, "textDocument/switchSourceHeader", {
       textDocument: { uri },
     });
+    editor.debug(`clangdSwitchSourceHeader: got result ${JSON.stringify(result)}`);
     if (typeof result === "string" && result.length > 0) {
       const targetPath = fileUriToPath(result);
       editor.openFile(targetPath, 0, 0);

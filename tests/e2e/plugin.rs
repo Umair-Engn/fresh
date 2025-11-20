@@ -1,6 +1,10 @@
 use crate::common::fixtures::TestFixture;
 use crate::common::harness::EditorTestHarness;
+use crate::common::fake_lsp::FakeLspServer;
 use crossterm::event::{KeyCode, KeyModifiers};
+use fresh::config::Config;
+use fresh::lsp::LspServerConfig;
+use fresh::process_limits::ProcessLimits;
 use std::fs;
 use std::time::Duration;
 
@@ -1665,4 +1669,85 @@ editor.setStatus("Panel cleanup test plugin loaded");
         "Second panel content should be visible. Got:\n{}",
         screen3
     );
+}
+
+/// Ensure the clangd plugin uses editor.sendLspRequest successfully
+#[test]
+fn test_clangd_plugin_switch_source_header() -> std::io::Result<()> {
+    let _fake_server = FakeLspServer::spawn()?;
+
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let project_root = temp_dir.path().join("project_root");
+    fs::create_dir(&project_root).unwrap();
+
+    let plugins_dir = project_root.join("plugins");
+    fs::create_dir(&plugins_dir).unwrap();
+    let plugin_source = std::env::current_dir()
+        .unwrap()
+        .join("plugins/clangd_support.ts");
+    fs::copy(&plugin_source, plugins_dir.join("clangd_support.ts")).unwrap();
+
+    let src_dir = project_root.join("src");
+    fs::create_dir_all(&src_dir).unwrap();
+    let source_file = src_dir.join("main.cpp");
+    fs::write(&source_file, "int main() { return 0; }\n").unwrap();
+    let header_file = src_dir.join("main.h");
+    fs::write(&header_file, "// header content\n").unwrap();
+
+    let mut config = Config::default();
+    config.lsp.insert(
+        "cpp".to_string(),
+        LspServerConfig {
+            command: FakeLspServer::script_path()
+                .to_string_lossy()
+                .to_string(),
+            args: vec![],
+            enabled: true,
+            process_limits: ProcessLimits::default(),
+        },
+    );
+
+    let mut harness = EditorTestHarness::with_config_and_working_dir(
+        120,
+        30,
+        config,
+        project_root.clone(),
+    )
+    .unwrap();
+
+    harness.open_file(&source_file)?;
+    harness.render()?;
+    for _ in 0..10 {
+        std::thread::sleep(Duration::from_millis(100));
+        let _ = harness.editor_mut().process_async_messages();
+        harness.render()?;
+    }
+
+    harness
+        .send_key(KeyCode::Char('p'), KeyModifiers::CONTROL)
+        .unwrap();
+    harness
+        .type_text("Clangd: Switch Source/Header")
+        .unwrap();
+    harness
+        .send_key(KeyCode::Enter, KeyModifiers::NONE)
+        .unwrap();
+
+    for _ in 0..5 {
+        std::thread::sleep(Duration::from_millis(50));
+        let _ = harness.editor_mut().process_async_messages();
+        harness.render()?;
+    }
+
+    let screen = harness.screen_to_string();
+    assert!(
+        screen.contains("header content"),
+        "Expected header file to be visible"
+    );
+    assert!(
+        screen.contains("Clangd: opened corresponding file"),
+        "Expected clangd status message"
+    );
+
+    Ok(())
 }
