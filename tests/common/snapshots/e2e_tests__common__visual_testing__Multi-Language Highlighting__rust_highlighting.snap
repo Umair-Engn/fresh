@@ -12,22 +12,22 @@ expression: "&screen_text"
     6 │     let message = greet("World");                                      █
     7 │     println!("{}", message);                                           █
     8 │ }                                                                      █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
-                                                                               █
+    9 │                                                                        █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
+~                                                                              █
 hello.rs | Ln 0, Col 0 | Opened hello.rs                        Palette: Ctrl+P
