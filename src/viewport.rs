@@ -10,6 +10,13 @@ pub struct Viewport {
     /// The line number for this byte is obtained from Buffer's LineCache
     pub top_byte: usize,
 
+    /// View line offset within the current top_byte position
+    /// Used when virtual lines precede source content at top_byte.
+    /// For example, if top_byte=0 and there are 120 virtual lines before
+    /// source line 1, top_view_line_offset=100 means skip the first 100
+    /// virtual lines and start rendering from virtual line 101.
+    pub top_view_line_offset: usize,
+
     /// Left column offset (horizontal scroll position)
     pub left_column: usize,
 
@@ -38,6 +45,7 @@ impl Viewport {
     pub fn new(width: u16, height: u16) -> Self {
         Self {
             top_byte: 0,
+            top_view_line_offset: 0,
             left_column: 0,
             width,
             height,
@@ -197,57 +205,59 @@ impl Viewport {
     /// * `view_lines` - The current display lines (from ViewLineIterator)
     /// * `cursor` - The cursor to ensure is visible
     /// * `gutter_width` - Width of the gutter (for cursor positioning)
-    pub fn ensure_visible_in_layout(&mut self, view_lines: &[ViewLine], cursor: &Cursor, gutter_width: usize) {
+    ///
+    /// Returns true if scrolling occurred.
+    pub fn ensure_visible_in_layout(&mut self, view_lines: &[ViewLine], cursor: &Cursor, gutter_width: usize) -> bool {
         let viewport_height = self.visible_line_count();
         if view_lines.is_empty() || viewport_height == 0 {
-            return;
+            return false;
         }
 
-        // Find the cursor's view line position
+        // Find the cursor's absolute view line position (in the full view_lines array)
         let cursor_view_line = self.find_view_line_for_byte(view_lines, cursor.position);
 
-        // Find the current top view line
-        let top_view_line = self.find_view_line_for_byte(view_lines, self.top_byte);
+        // The effective top view line is the offset we've scrolled through
+        let effective_top = self.top_view_line_offset;
+        let effective_bottom = effective_top + viewport_height;
 
-        // Check if cursor is within visible range (full viewport, no offset)
-        let visible_start = top_view_line;
-        let visible_end = top_view_line + viewport_height;
-
-        let cursor_is_visible = cursor_view_line >= visible_start && cursor_view_line < visible_end;
+        // Check if cursor is within visible range
+        let cursor_is_visible = cursor_view_line >= effective_top && cursor_view_line < effective_bottom;
 
         if !cursor_is_visible {
-            // Cursor left the viewport - scroll to center it
-            let target_top = cursor_view_line.saturating_sub(viewport_height / 2);
+            // Cursor is outside visible range - scroll to make it visible
+            let target_top = if cursor_view_line < effective_top {
+                // Cursor is above viewport - scroll up to show it
+                cursor_view_line
+            } else {
+                // Cursor is below viewport - scroll down to put cursor near bottom
+                cursor_view_line.saturating_sub(viewport_height - 1)
+            };
 
             // Apply scroll limit
             let max_top = view_lines.len().saturating_sub(viewport_height);
-            let clamped_top = target_top.min(max_top);
+            let new_offset = target_top.min(max_top);
 
-            // Get the source byte for the new top view line
-            if let Some(new_top_byte) = self.get_source_byte_for_view_line(view_lines, clamped_top) {
-                tracing::trace!(
-                    "ensure_visible_in_layout: cursor_view_line={}, top_view_line={}, clamped_top={}, new_top_byte={}",
-                    cursor_view_line, top_view_line, clamped_top, new_top_byte
-                );
-                self.top_byte = new_top_byte;
-            }
+            tracing::trace!(
+                "ensure_visible_in_layout: scrolling from offset {} to {}, cursor_view_line={}",
+                self.top_view_line_offset, new_offset, cursor_view_line
+            );
+
+            self.top_view_line_offset = new_offset;
+            return true;
         }
 
         // Handle horizontal scrolling for cursor column
-        // Find the cursor's column within its view line
         if cursor_view_line < view_lines.len() {
             let line = &view_lines[cursor_view_line];
-            // Find which column the cursor is at
             let cursor_col = line.char_mappings
                 .iter()
                 .position(|m| *m == Some(cursor.position))
                 .unwrap_or(0);
-
-            // Get line length for scroll limits
             let line_length = line.text.trim_end_matches('\n').chars().count();
-
             self.ensure_column_visible_simple(cursor_col, line_length, gutter_width);
         }
+
+        false
     }
 
     /// Simple column visibility check (doesn't need buffer)

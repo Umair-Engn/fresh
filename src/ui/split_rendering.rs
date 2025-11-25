@@ -1047,6 +1047,9 @@ impl SplitRenderer {
 
         // Track the current source line number separately from display lines
         let mut current_source_line_num = starting_line_num;
+        // Track whether the previous line was a source line (showed a line number)
+        // Used to determine when to increment the line counter
+        let mut prev_was_source_line = false;
 
         loop {
             // Get the current ViewLine from the pipeline
@@ -1085,11 +1088,14 @@ impl SplitRenderer {
             // This correctly handles: injected content, wrapped continuations, and source lines
             let show_line_number = should_show_line_number(current_view_line);
 
-            // Only increment source line number when we're at a new source line
-            // A line is a new source line if it should show a line number and isn't the first line
-            if show_line_number && lines_rendered > 0 {
+            // Only increment source line number when BOTH:
+            // 1. The PREVIOUS line was a source line (showed a line number)
+            // 2. The CURRENT line is also a source line
+            // This ensures virtual/injected lines don't cause line numbers to skip
+            if show_line_number && prev_was_source_line {
                 current_source_line_num += 1;
             }
+            prev_was_source_line = show_line_number;
 
             // is_continuation means "don't show line number" for rendering purposes
             let is_continuation = !show_line_number;
@@ -1794,6 +1800,9 @@ impl SplitRenderer {
         let compose_layout = Self::calculate_compose_layout(area, &view_mode, compose_width);
         let render_area = compose_layout.render_area;
 
+        // Clone view_transform so we can reuse it if scrolling triggers a rebuild
+        let view_transform_for_rebuild = view_transform.clone();
+
         let view_data = Self::build_view_data(
             state,
             view_transform,
@@ -1803,6 +1812,27 @@ impl SplitRenderer {
             render_area.width as usize,
             gutter_width,
         );
+
+        // Ensure cursor is visible using Layout-aware check (handles virtual lines)
+        // This detects when cursor is beyond the rendered view_lines and scrolls
+        let primary = *state.cursors.primary();
+        let scrolled = state.viewport.ensure_visible_in_layout(&view_data.lines, &primary, gutter_width);
+
+        // If we scrolled, rebuild view_data from new position WITH the view_transform
+        // This ensures virtual lines are included in the rebuilt view
+        let view_data = if scrolled {
+            Self::build_view_data(
+                state,
+                view_transform_for_rebuild,
+                estimated_line_length,
+                visible_count,
+                line_wrap,
+                render_area.width as usize,
+                gutter_width,
+            )
+        } else {
+            view_data
+        };
 
         let view_anchor = Self::calculate_view_anchor(&view_data.lines, state.viewport.top_byte);
         Self::render_compose_margins(frame, area, &compose_layout, &view_mode, theme);
@@ -1848,10 +1878,18 @@ impl SplitRenderer {
             selection.primary_cursor_position,
         );
 
+        // Apply top_view_line_offset to skip virtual lines when scrolling through them
+        let view_line_offset = state.viewport.top_view_line_offset;
+        let view_lines_to_render = if view_line_offset > 0 && view_line_offset < view_data.lines.len() {
+            &view_data.lines[view_line_offset..]
+        } else {
+            &view_data.lines
+        };
+
         let render_output = Self::render_view_lines(LineRenderInput {
             state,
             theme,
-            view_lines: &view_data.lines,
+            view_lines: view_lines_to_render,
             view_anchor,
             render_area,
             gutter_width,

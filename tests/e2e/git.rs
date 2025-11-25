@@ -2145,32 +2145,94 @@ fn test_view_transform_scroll_with_many_virtual_lines() {
     harness.wait_until(|h| !h.get_buffer_content().is_empty())
         .unwrap();
 
-    // Launch the view marker that injects many virtual lines
+    // Launch the view marker that injects many virtual lines (120 pads + header before Line 1)
     trigger_test_view_marker_many_virtual_lines(&mut harness);
 
-    // Wait for header to appear
-    let header_seen = harness
-        .wait_for_async(|h| h.screen_to_string().contains("HEADER AT BYTE 0"), 5000)
+    // Wait for the virtual buffer to be created and rendered
+    // The cursor starts at Line 1 (byte 0), which is view line 121 (after 120 virtual pads + 1 header)
+    // Auto-scroll should bring the cursor into view, showing the source lines
+    let source_visible = harness
+        .wait_for_async(|h| {
+            let screen = h.screen_to_string();
+            screen.contains("Line 1") || screen.contains("Line 2") || screen.contains("Line 3")
+        }, 5000)
         .unwrap();
-    assert!(header_seen, "Header should appear even with virtual pad lines");
+    assert!(source_visible, "Source content should be visible after auto-scroll to cursor");
 
-    // Scroll down repeatedly with cursor Down; should eventually reach real content lines
-    for _ in 0..500 {
+    let initial_screen = harness.screen_to_string();
+    println!("Initial screen (auto-scrolled to cursor):\n{initial_screen}");
+
+    // Now scroll UP to verify we can see the virtual lines
+    for _ in 0..150 {
         harness
-            .send_key(KeyCode::Down, KeyModifiers::NONE)
+            .send_key(KeyCode::Up, KeyModifiers::NONE)
             .unwrap();
         harness.process_async_and_render().unwrap();
     }
     harness.render().unwrap();
 
-    let screen = harness.screen_to_string();
-    println!("Screen after scrolling through many virtual lines:\n{screen}");
+    let screen_after_up = harness.screen_to_string();
+    println!("Screen after scrolling up through virtual lines:\n{screen_after_up}");
 
+    // After scrolling up, we should see the header or virtual pads
     assert!(
-        screen.contains("Line 3")
-            || screen.contains("Line 2")
-            || screen.contains("Virtual pad 80"),
-        "Scrolling should reach real content (or deep virtual pads) after many virtual lines"
+        screen_after_up.contains("HEADER AT BYTE 0")
+            || screen_after_up.contains("Virtual pad"),
+        "Scrolling up should reveal header or virtual pad lines"
+    );
+}
+
+/// Test scrolling with a single virtual line (header only, no pads)
+#[test]
+fn test_view_transform_scroll_with_single_virtual_line() {
+    init_tracing_from_env();
+
+    let repo = GitTestRepo::new();
+
+    repo.create_file("test.txt", "placeholder");
+    repo.git_add(&["test.txt"]);
+    repo.git_commit("Initial commit");
+    repo.setup_test_view_marker_plugin();
+
+    let mut harness = EditorTestHarness::with_config_and_working_dir(
+        120,
+        20,
+        Config::default(),
+        repo.path.clone(),
+    )
+    .unwrap();
+
+    // Open the test file
+    let file_path = repo.path.join("test.txt");
+    harness.open_file(&file_path).unwrap();
+    harness.wait_until(|h| !h.get_buffer_content().is_empty())
+        .unwrap();
+
+    // Launch the view marker that injects just a header (no pads)
+    trigger_test_view_marker(&mut harness);
+
+    // Wait for virtual buffer to render with header
+    let header_seen = harness
+        .wait_for_async(|h| h.screen_to_string().contains("HEADER AT BYTE 0"), 5000)
+        .unwrap();
+    assert!(header_seen, "Header should appear with single virtual line");
+
+    let screen = harness.screen_to_string();
+    println!("Screen with single virtual header line:\n{screen}");
+
+    // Should also see source content below the header
+    assert!(
+        screen.contains("Line 1") || screen.contains("Line 2"),
+        "Source content should be visible below header"
+    );
+
+    // Verify line numbers match content:
+    // - Header line should have no line number (virtual)
+    // - "Line 1" should show line number 1
+    // - "Line 2" should show line number 2
+    assert!(
+        screen.contains("1 │ Line 1") || screen.contains("1│Line 1"),
+        "Line 1 should have line number 1 in gutter"
     );
 }
 
