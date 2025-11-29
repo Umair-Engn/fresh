@@ -436,45 +436,20 @@ impl StatusBarRenderer {
             .fg(theme.menu_dropdown_fg)
             .bg(theme.menu_dropdown_bg);
 
-        // Get keybindings for search options (look up in Prompt context first, then Global)
-        let case_shortcut = keybindings
-            .get_keybinding_for_action(
-                &crate::input::keybindings::Action::ToggleSearchCaseSensitive,
-                crate::input::keybindings::KeyContext::Prompt,
-            )
-            .or_else(|| {
-                keybindings.get_keybinding_for_action(
-                    &crate::input::keybindings::Action::ToggleSearchCaseSensitive,
-                    crate::input::keybindings::KeyContext::Global,
-                )
-            })
-            .unwrap_or_else(|| "Alt+C".to_string());
+        // Helper to look up keybinding for an action (Prompt context first, then Global)
+        let get_shortcut = |action: &crate::input::keybindings::Action| -> Option<String> {
+            keybindings
+                .get_keybinding_for_action(action, crate::input::keybindings::KeyContext::Prompt)
+                .or_else(|| {
+                    keybindings
+                        .get_keybinding_for_action(action, crate::input::keybindings::KeyContext::Global)
+                })
+        };
 
-        let word_shortcut = keybindings
-            .get_keybinding_for_action(
-                &crate::input::keybindings::Action::ToggleSearchWholeWord,
-                crate::input::keybindings::KeyContext::Prompt,
-            )
-            .or_else(|| {
-                keybindings.get_keybinding_for_action(
-                    &crate::input::keybindings::Action::ToggleSearchWholeWord,
-                    crate::input::keybindings::KeyContext::Global,
-                )
-            })
-            .unwrap_or_else(|| "Alt+W".to_string());
-
-        let regex_shortcut = keybindings
-            .get_keybinding_for_action(
-                &crate::input::keybindings::Action::ToggleSearchRegex,
-                crate::input::keybindings::KeyContext::Prompt,
-            )
-            .or_else(|| {
-                keybindings.get_keybinding_for_action(
-                    &crate::input::keybindings::Action::ToggleSearchRegex,
-                    crate::input::keybindings::KeyContext::Global,
-                )
-            })
-            .unwrap_or_else(|| "Alt+R".to_string());
+        // Get keybindings for search options
+        let case_shortcut = get_shortcut(&crate::input::keybindings::Action::ToggleSearchCaseSensitive);
+        let word_shortcut = get_shortcut(&crate::input::keybindings::Action::ToggleSearchWholeWord);
+        let regex_shortcut = get_shortcut(&crate::input::keybindings::Action::ToggleSearchRegex);
 
         // Build the options display with checkboxes
         let case_checkbox = if case_sensitive { "[x]" } else { "[ ]" };
@@ -505,8 +480,10 @@ impl StatusBarRenderer {
                 base_style
             },
         ));
-        spans.push(Span::styled(" Case Sensitive ", base_style));
-        spans.push(Span::styled(format!("({})", case_shortcut), shortcut_style));
+        spans.push(Span::styled(" Case Sensitive", base_style));
+        if let Some(shortcut) = &case_shortcut {
+            spans.push(Span::styled(format!(" ({})", shortcut), shortcut_style));
+        }
 
         // Separator
         spans.push(Span::styled("   ", base_style));
@@ -516,8 +493,10 @@ impl StatusBarRenderer {
             word_checkbox,
             if whole_word { active_style } else { base_style },
         ));
-        spans.push(Span::styled(" Whole Word ", base_style));
-        spans.push(Span::styled(format!("({})", word_shortcut), shortcut_style));
+        spans.push(Span::styled(" Whole Word", base_style));
+        if let Some(shortcut) = &word_shortcut {
+            spans.push(Span::styled(format!(" ({})", shortcut), shortcut_style));
+        }
 
         // Separator
         spans.push(Span::styled("   ", base_style));
@@ -527,27 +506,15 @@ impl StatusBarRenderer {
             regex_checkbox,
             if use_regex { active_style } else { base_style },
         ));
-        spans.push(Span::styled(" Regex ", base_style));
-        spans.push(Span::styled(
-            format!("({})", regex_shortcut),
-            shortcut_style,
-        ));
+        spans.push(Span::styled(" Regex", base_style));
+        if let Some(shortcut) = &regex_shortcut {
+            spans.push(Span::styled(format!(" ({})", shortcut), shortcut_style));
+        }
 
         // Confirm Each option (only shown in replace mode)
         if let Some(confirm_value) = confirm_each {
-            let confirm_shortcut = keybindings
-                .get_keybinding_for_action(
-                    &crate::input::keybindings::Action::ToggleSearchConfirmEach,
-                    crate::input::keybindings::KeyContext::Prompt,
-                )
-                .or_else(|| {
-                    keybindings.get_keybinding_for_action(
-                        &crate::input::keybindings::Action::ToggleSearchConfirmEach,
-                        crate::input::keybindings::KeyContext::Global,
-                    )
-                })
-                .unwrap_or_else(|| "Alt+I".to_string());
-
+            let confirm_shortcut =
+                get_shortcut(&crate::input::keybindings::Action::ToggleSearchConfirmEach);
             let confirm_checkbox = if confirm_value { "[x]" } else { "[ ]" };
 
             // Separator
@@ -557,8 +524,10 @@ impl StatusBarRenderer {
                 confirm_checkbox,
                 if confirm_value { active_style } else { base_style },
             ));
-            spans.push(Span::styled(" Confirm ", base_style));
-            spans.push(Span::styled(format!("({})", confirm_shortcut), shortcut_style));
+            spans.push(Span::styled(" Confirm", base_style));
+            if let Some(shortcut) = &confirm_shortcut {
+                spans.push(Span::styled(format!(" ({})", shortcut), shortcut_style));
+            }
         }
 
         // Fill remaining space
