@@ -33,6 +33,7 @@ fn write_and_sync(path: &Path, content: &str) {
 /// The test performs multiple edit-save cycles to ensure the notify
 /// watcher continues working after repeated file changes.
 #[test]
+#[cfg_attr(target_os = "macos", ignore)] // FSEvents coalescing can cause flaky timing
 fn test_auto_revert_multiple_external_edits() {
     let mut harness = EditorTestHarness::with_temp_project(80, 24).unwrap();
     let project_dir = harness.project_dir().unwrap();
