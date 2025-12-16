@@ -37,7 +37,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           DATE=$(date +%Y-%m-%d)
-          sed -i "s/version=\"[^\"]*\"/version=\"$VERSION\"/" flatpak/io.github.sinelaw.fresh.metainfo.xml
+          sed -i "s/<release version=\"[^\"]*\"/<release version=\"$VERSION\"/" flatpak/io.github.sinelaw.fresh.metainfo.xml
           sed -i "s/date=\"[^\"]*\"/date=\"$DATE\"/" flatpak/io.github.sinelaw.fresh.metainfo.xml
 
       - name: Build Flatpak
